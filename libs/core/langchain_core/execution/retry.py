@@ -29,6 +29,17 @@ class RetryPolicy(BaseExecutionPolicy):
     def should_retry(self, attempt: int, error: Exception) -> bool:
         return attempt < self._max_retries
 
+    def reset(self) -> None:
+        """Reset the attempt counter, allowing the policy to be reused.
+
+        In long-lived service contexts a policy is often created once at startup
+        and shared across request handlers. Without ``reset()``, the attempt
+        counter accumulates across unrelated calls and ``should_retry()`` begins
+        returning ``False`` prematurely once the cumulative count exceeds
+        ``max_retries``.
+        """
+        self._attempts = 0
+
     def apply(
         self,
         func: Callable[..., Any],
