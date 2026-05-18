@@ -29,6 +29,19 @@ class RetryPolicy(BaseExecutionPolicy):
     def should_retry(self, attempt: int, error: Exception) -> bool:
         return attempt < self._max_retries
 
+    @property
+    def is_exhausted(self) -> bool:
+        """Return ``True`` once all retry budget has been consumed.
+
+        ``should_retry()`` answers "should I retry *this* error on *this*
+        attempt?" at call time. ``is_exhausted`` answers the orthogonal question
+        "has this policy run out of budget?" without requiring the caller to
+        supply an attempt index or an exception. Useful in observability hooks
+        and health checks that inspect policy state between invocations rather
+        than inside the retry loop.
+        """
+        return self._attempts > self._max_retries
+
     def apply(
         self,
         func: Callable[..., Any],
