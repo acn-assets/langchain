@@ -25,6 +25,17 @@ class TimeoutPolicy(BaseExecutionPolicy):
     def should_retry(self, attempt: int, error: Exception) -> bool:
         return False
 
+    def validate(self) -> None:
+        """Raise ``ValueError`` if the timeout configuration is invalid.
+
+        Intended to be called at application startup or in health-check hooks to
+        surface misconfiguration early rather than at invocation time.
+        """
+        if self.seconds is not None and self.seconds <= 0:
+            raise ValueError(
+                f"timeout_seconds must be positive, got {self.seconds!r}"
+            )
+
     def apply(
         self,
         func: Callable[..., Any],
