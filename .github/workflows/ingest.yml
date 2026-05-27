@@ -1,0 +1,81 @@
+name: Repository Ingest Trigger
+
+on:
+  pull_request_target:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Repository in owner/name format
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-ingest:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'pull_request_target' &&
+        github.event.action == 'labeled' &&
+        github.event.label.name == 'ai-ingest'
+      )
+    runs-on: ubuntu-latest
+    env:
+      VENDOR_SERVICE_URL: ${{ secrets.VENDOR_SERVICE_URL }}
+      VENDOR_API_TOKEN: ${{ secrets.VENDOR_API_TOKEN }}
+      INGEST_REPOSITORY: ${{ inputs.repository || github.event.repository.full_name || github.repository }}
+    steps:
+      - name: Trigger webhook endpoint with signature
+        shell: bash
+        env:
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${VENDOR_SERVICE_URL}" ]; then
+            echo "VENDOR_SERVICE_URL secret is required"
+            exit 1
+          fi
+          if [ -z "${WEBHOOK_SECRET}" ]; then
+            echo "WEBHOOK_SECRET secret is required"
+            exit 1
+          fi
+          if [ -z "${INGEST_REPOSITORY}" ]; then
+            echo "Repository name is required"
+            exit 1
+          fi
+
+          # Synthesize a compact GitHub webhook payload for a labeled PR event with dynamic fields
+          payload=$(printf '{"action":"labeled","number":1,"pull_request":{"number":1,"title":"PR","user":{"login":"%s","id":1234},"labels":[{"name":"ai-ingest"}],"base":{"ref":"main","sha":"sha"},"head":{"ref":"feature-branch","sha":"sha"},"diff_url":"https://github.com/%s/pull/1.diff","html_url":"https://github.com/%s/pull/1"},"repository":{"id":123456,"full_name":"%s","clone_url":"%s"},"label":{"name":"ai-ingest"},"sender":{"login":"%s","id":1234}}' \
+            "$GITHUB_ACTOR" \
+            "$INGEST_REPOSITORY" \
+            "$INGEST_REPOSITORY" \
+            "$INGEST_REPOSITORY" \
+            "$GITHUB_SERVER_URL/$INGEST_REPOSITORY.git" \
+            "$GITHUB_ACTOR")
+
+          # Generate the X-Hub-Signature-256 header from the exact payload bytes
+          signature="sha256=$(printf '%s' "$payload" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | sed 's/^.* //')"
+
+          echo "Triggering webhook for ${INGEST_REPOSITORY}"
+
+          response=$(curl -sS -w '\n%{http_code}' -X POST "${VENDOR_SERVICE_URL}/webhook" \
+            -H "Content-Type: application/json" \
+            -H "X-Hub-Signature-256: $signature" \
+            -d "$payload")
+
+          status_code=$(printf '%s\n' "${response}" | tail -n 1)
+          response_body=$(printf '%s\n' "${response}" | sed '$d')
+
+          echo "Response status: ${status_code}"
+          echo "Response body: ${response_body}"
+
+          case "${status_code}" in
+            2*) ;;
+            *)
+              echo "Webhook request failed"
+              exit 1
+              ;;
+          esac
