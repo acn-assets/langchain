@@ -48,7 +48,7 @@ jobs:
           fi
 
           # Synthesize a compact GitHub webhook payload for a labeled PR event with dynamic fields
-          payload=$(printf '{"action":"labeled","number":1,"pull_request":{"number":1,"title":"PR","user":{"login":"%s","id":1234},"labels":[{"name":"ai-ingest"}],"base":{"ref":"main","sha":"sha"},"head":{"ref":"feature-branch","sha":"sha"},"diff_url":"https://github.com/%s/pull/1.diff","html_url":"https://github.com/%s/pull/1"},"repository":{"id":123456,"full_name":"%s","clone_url":"%s"},"label":{"name":"ai-ingest"},"sender":{"login":"%s","id":1234}}' \
+          payload=$(printf '{"action":"labeled","number":1,"pull_request":{"number":1,"title":"PR","user":{"login":"%s","id":1234},"labels":[{"name":"ai-ingest"}],"base":{"ref":"master","sha":"sha"},"head":{"ref":"feature-branch","sha":"sha"},"diff_url":"https://github.com/%s/pull/1.diff","html_url":"https://github.com/%s/pull/1"},"repository":{"id":123456,"full_name":"%s","clone_url":"%s"},"label":{"name":"ai-ingest"},"sender":{"login":"%s","id":1234}}' \
             "$GITHUB_ACTOR" \
             "$INGEST_REPOSITORY" \
             "$INGEST_REPOSITORY" \
