@@ -61,7 +61,7 @@ jobs:
 
           echo "Triggering webhook for ${INGEST_REPOSITORY}"
 
-          response=$(curl -sS -w '\n%{http_code}' -X POST "${VENDOR_SERVICE_URL}/webhook" \
+          response=$(curl --max-time 900 -sS -w '\n%{http_code}' -X POST "${VENDOR_SERVICE_URL}/webhook" \
             -H "Content-Type: application/json" \
             -H "X-Hub-Signature-256: $signature" \
             -d "$payload")
