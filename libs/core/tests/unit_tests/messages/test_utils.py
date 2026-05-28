@@ -219,6 +219,27 @@ def test_filter_message_exclude_tool_calls() -> None:
     assert messages == messages_model_copy
 
 
+def test_find_message_by_id() -> None:
+    messages = [
+        SystemMessage("foo", id="1"),
+        HumanMessage("bar", id="2"),
+        AIMessage("baz", id="3"),
+    ]
+
+    assert find_message(messages, message_id="2") == messages[1]
+    assert find_message(messages, message_id="missing") is None
+
+
+def test_find_message_by_id_runnable() -> None:
+    messages = [
+        SystemMessage("foo", id="1"),
+        HumanMessage("bar", id="2"),
+    ]
+
+    runnable = find_message(message_id="1")
+    assert runnable(messages) == messages[0]
+
+
 def test_filter_message_exclude_tool_calls_content_blocks() -> None:
     tool_calls = [
         {"name": "foo", "id": "1", "args": {}, "type": "tool_call"},

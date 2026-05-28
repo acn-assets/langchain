@@ -990,6 +990,28 @@ def filter_messages(
 
 
 @_runnable_support
+def find_message(
+    messages: Iterable[MessageLikeRepresentation] | PromptValue,
+    *,
+    message_id: str,
+) -> BaseMessage | None:
+    """Return the first message with the specified `id`.
+
+    Args:
+        messages: Sequence of message-like values to search.
+        message_id: The message id to match.
+
+    Returns:
+        The first matching `BaseMessage` or `None` if no message is found.
+    """
+    messages = convert_to_messages(messages)
+    for message in messages:
+        if message.id == message_id:
+            return message
+    return None
+
+
+@_runnable_support
 def merge_message_runs(
     messages: Iterable[MessageLikeRepresentation] | PromptValue,
     *,
